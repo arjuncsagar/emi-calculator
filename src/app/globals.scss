@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --background: #ffffff;
+    --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: radial-gradient(#334155, #0f172a);
+        --background1: radial-gradient(#cbd5e1, #b7d4f6);
+        --foreground: #cbd5e1;
+        --foreground1: #0f172a;
+    }
+}
+
+body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.MuiFormControl-root {
+    .MuiInputBase-root {
+        color: var(--foreground);
+    }
+}

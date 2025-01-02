@@ -15,6 +15,7 @@ import {
 import {DatePicker, LocalizationProvider} from '@mui/x-date-pickers';
 import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import moment from 'moment/moment';
+import {getFormattedCurrency} from '@/app/helper';
 
 const EmiCalculatorForm = () => {
     const {control, handleSubmit} = useForm({
@@ -22,7 +23,10 @@ const EmiCalculatorForm = () => {
             loanAmount: '0',
             loanTenure: '0',
             interestRate: '0.0',
-            startDate: moment()
+            startDate: moment(),
+            monthlyPrepayment: '0',
+            monthlyPrepaymentDate: moment(),
+            adjustedEmi: '0'
         }
     });
     const [emiBreakdownList, setEmiBreakdownList] = React.useState([]);
@@ -32,11 +36,16 @@ const EmiCalculatorForm = () => {
         const loanTenure = parseInt(data.loanTenure);
         const annualRate = parseFloat(data.interestRate);
         const startDate = moment(data.startDate);
-        const prepayments = [
-            {month: 12, amount: 50000}
-        ];
+        const prepayments = [];
+        const monthlyPrepayment = parseFloat(data.monthlyPrepayment);
+        const monthlyPrepaymentDate = moment(data.monthlyPrepaymentDate);
+        const adjustedEmi = parseFloat(data.adjustedEmi);
+        const emi = adjustedEmi ? adjustedEmi : calculateEMI(principal, annualRate, loanTenure);
 
-        const emiBreakdown = calculateEMIBreakdownWithPrepaymentFixedEMI(principal, annualRate, 27567, prepayments);
+        const emiBreakdown = calculateEMIBreakdownWithPrepaymentFixedEMI(
+            principal, annualRate, emi, prepayments, startDate,
+            monthlyPrepayment, monthlyPrepaymentDate
+        );
         setEmiBreakdownList(emiBreakdown);
 
         console.log('Month\tEMI\t\tInterest\tPrincipal\tRemaining Principal');
@@ -47,116 +56,60 @@ const EmiCalculatorForm = () => {
         });
     }
 
-    function calculateEMIBreakdown(principal, annualRate, tenureMonths) {
-        // Convert annual rate to monthly and in decimal
+    function calculateEMI(principal, annualRate, tenureMonths) {
+        // Convert annual interest rate to monthly interest rate
         const monthlyRate = annualRate / (12 * 100);
-        let remainingPrincipal = principal;
-        let breakdown = [];
 
-        for (let month = 1; month <= tenureMonths; month++) {
-            // EMI formula calculation
-            const emi = (remainingPrincipal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths - month + 1)) /
-                (Math.pow(1 + monthlyRate, tenureMonths - month + 1) - 1);
+        // EMI formula
+        const emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
+            (Math.pow(1 + monthlyRate, tenureMonths) - 1);
 
-            // Calculate interest and principal components
-            const interestComponent = remainingPrincipal * monthlyRate;
-            const principalComponent = emi - interestComponent;
-
-            // Update remaining principal
-            remainingPrincipal -= principalComponent;
-
-            // Store the breakdown for this month
-            breakdown.push({
-                month: month,
-                emi: emi.toFixed(2),
-                interest: interestComponent.toFixed(2),
-                principal: principalComponent.toFixed(2),
-                remainingPrincipal: remainingPrincipal > 0 ? remainingPrincipal.toFixed(2) : '0.00'
-            });
-
-            // Stop if the loan is fully repaid
-            if (remainingPrincipal <= 0) {
-                break;
-            }
-        }
-
-        return breakdown;
+        return emi.toFixed(2); // Return EMI rounded to 2 decimal places
     }
 
-    function calculateEMIBreakdownWithPrepayment(principal, annualRate, tenureMonths, prepayments = []) {
-        // Convert annual rate to monthly and in decimal
-        const monthlyRate = annualRate / (12 * 100);
-        let remainingPrincipal = principal;
+    function calculateEMIBreakdownWithPrepaymentFixedEMI(principal, annualRate, emi, prepayments = [],
+        startDate, monthlyPrepayment, monthlyPrepaymentDate) {
+        // Convert annual rate to daily and in decimal
+        const dailyRate = annualRate / 365;
+        let remainingPrincipal = parseInt(principal, 10);
         let breakdown = [];
-
-        for (let month = 1; month <= tenureMonths; month++) {
-            // EMI formula calculation
-            const emi = (remainingPrincipal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths - month + 1)) /
-                (Math.pow(1 + monthlyRate, tenureMonths - month + 1) - 1);
-
-            // Calculate interest and principal components
-            const interestComponent = remainingPrincipal * monthlyRate;
-            const principalComponent = emi - interestComponent;
-
-            // Update remaining principal
-            remainingPrincipal -= principalComponent;
-
-            // Check for prepayment in this month
-            const prepayment = prepayments.find(p => p.month === month);
-            if (prepayment) {
-                remainingPrincipal -= prepayment.amount;
-            }
-
-            // Store the breakdown for this month
-            breakdown.push({
-                month: month,
-                emi: emi.toFixed(2),
-                interest: interestComponent.toFixed(2),
-                principal: principalComponent.toFixed(2),
-                prepayment: prepayment ? prepayment.amount.toFixed(2) : '0.00',
-                remainingPrincipal: remainingPrincipal > 0 ? remainingPrincipal.toFixed(2) : '0.00'
-            });
-
-            // Stop if the loan is fully repaid
-            if (remainingPrincipal <= 0) {
-                break;
-            }
-        }
-
-        return breakdown;
-    }
-
-    function calculateEMIBreakdownWithPrepaymentFixedEMI(principal, annualRate, emi = 27567, prepayments = []) {
-        // Convert annual rate to monthly and in decimal
-        const monthlyRate = annualRate / (12 * 100);
-        let remainingPrincipal = principal;
-        let breakdown = [];
-        let month = 0;
+        let emiPeriod = getFirstDayOfMonth(startDate);
+        //const formattedEmiPeriod = moment(emiPeriod).format('YYYY-MM');
 
         while (remainingPrincipal > 0) {
-            month++;
 
-            // Calculate interest and principal components
-            const interestComponent = remainingPrincipal * monthlyRate;
-            const principalComponent = emi - interestComponent;
+            let interestComponent = 0;
+            const daysInMonth = emiPeriod.daysInMonth();
 
-            // Update remaining principal
-            remainingPrincipal -= principalComponent;
+            for (let i = 1; i <= daysInMonth; i++) {
+                if (startDate.date() === emiPeriod.date()) {
+                    remainingPrincipal -= emi;
+                }
 
-            // Check for prepayment in this month
-            const prepayment = prepayments.find(p => p.month === month);
-            if (prepayment) {
-                remainingPrincipal -= prepayment.amount;
+                // Check for monthly prepayment
+                if (monthlyPrepaymentDate.date() === emiPeriod.date() &&
+                    monthlyPrepaymentDate.isSameOrBefore(emiPeriod, 'day')) {
+                    remainingPrincipal -= monthlyPrepayment;
+                }
+
+                // Calculate interest component
+                const dailyInterest = parseFloat(((remainingPrincipal * dailyRate) / 100).toFixed(2));
+                interestComponent += dailyInterest;
+                emiPeriod.add(1, 'day');
             }
+
+            // Calculate principal component
+            remainingPrincipal += interestComponent;
+            const principalComponent = emi + monthlyPrepayment - interestComponent;
 
             // Store the breakdown for this month
             breakdown.push({
-                month: month,
-                emi: emi.toFixed(2),
+                month: moment(emiPeriod).clone().subtract(1, 'month').format('MMM YYYY'),
+                emi: parseInt(emi + monthlyPrepayment, 10),
                 interest: interestComponent.toFixed(2),
-                principal: principalComponent.toFixed(2),
-                prepayment: prepayment ? prepayment.amount.toFixed(2) : '0.00',
-                remainingPrincipal: remainingPrincipal > 0 ? remainingPrincipal.toFixed(2) : '0.00'
+                principal: Math.round(principalComponent),
+                prepayment: monthlyPrepayment ? parseInt(monthlyPrepayment, 10) : 0,
+                remainingPrincipal: remainingPrincipal > 0 ? Math.round(remainingPrincipal) : 0
             });
 
             // Stop if the loan is fully repaid
@@ -166,6 +119,10 @@ const EmiCalculatorForm = () => {
         }
 
         return breakdown;
+    }
+
+    const getFirstDayOfMonth = (date) => {
+        return moment(date).startOf('month');
     }
 
     return (
@@ -198,24 +155,33 @@ const EmiCalculatorForm = () => {
                                         <DatePicker {...field}
                                                     label="Start Date"/>
                                     </LocalizationProvider>}/>
-                </section>
-                <section>
-                    <h4>Prepayment</h4>
-                    <Controller name="prepayment"
+                    <Controller name="adjustedEmi"
                                 control={control}
                                 render={({field}) =>
                                     <TextField {...field}
-                                               label="Prepayment"
+                                               label="Adjust EMI"
                                                type="text"/>}/>
-                    <Controller name="monthlyPrepaymentStartDate"
-                                control={control}
-                                render={({field}) =>
-                                    <LocalizationProvider dateAdapter={AdapterMoment}>
-                                        <DatePicker {...field}
-                                                    label="Monthly Prepayment Start Date"/>
-                                    </LocalizationProvider>}/>
                 </section>
-                <section>
+                <h4>Prepayment</h4>
+                <section className="prepayment">
+                    <div className="monthlyPrepayment">
+                        <h6>Monthly Prepayment</h6>
+                        <Controller name="monthlyPrepayment"
+                                    control={control}
+                                    render={({field}) =>
+                                        <TextField {...field}
+                                                   label="Amount"
+                                                   type="text"/>}/>
+                        <Controller name="monthlyPrepaymentDate"
+                                    control={control}
+                                    render={({field}) =>
+                                        <LocalizationProvider dateAdapter={AdapterMoment}>
+                                            <DatePicker {...field}
+                                                        label="Start Date"/>
+                                        </LocalizationProvider>}/>
+                    </div>
+                </section>
+                <section className="button">
                     <Button type="submit" variant="contained">Calculate</Button>
                 </section>
             </form>
@@ -225,23 +191,25 @@ const EmiCalculatorForm = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
+                                <TableCell>#</TableCell>
                                 <TableCell>Month</TableCell>
                                 <TableCell>EMI</TableCell>
                                 <TableCell>Interest</TableCell>
                                 <TableCell>Principal</TableCell>
                                 <TableCell>Prepayment</TableCell>
-                                <TableCell>Remaining Principal</TableCell>
+                                <TableCell>Balance</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {emiBreakdownList.map(detail => (
-                                <TableRow key={detail.month}>
+                            {emiBreakdownList.map((detail, ix) => (
+                                <TableRow key={`${ix}-${detail.month}`}>
+                                    <TableCell>{++ix}</TableCell>
                                     <TableCell>{detail.month}</TableCell>
-                                    <TableCell>₹{detail.emi}</TableCell>
-                                    <TableCell>₹{detail.interest}</TableCell>
-                                    <TableCell>₹{detail.principal}</TableCell>
-                                    <TableCell>₹{detail.prepayment}</TableCell>
-                                    <TableCell>₹{detail.remainingPrincipal}</TableCell>
+                                    <TableCell>{getFormattedCurrency(detail.emi)}</TableCell>
+                                    <TableCell>{getFormattedCurrency(detail.interest)}</TableCell>
+                                    <TableCell>{getFormattedCurrency(detail.principal)}</TableCell>
+                                    <TableCell>{getFormattedCurrency(detail.prepayment)}</TableCell>
+                                    <TableCell>{getFormattedCurrency(detail.remainingPrincipal)}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

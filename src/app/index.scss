@@ -63,14 +63,20 @@
     gap: 1rem;
     padding: 1rem;
 
-    > h4 {
+    .table-header-div {
       display: flex;
-      justify-content: center;
-      line-height: 3rem;
-      font-size: 1.25rem;
-      font-weight: bold;
-      border-radius: 2rem;
-      background: repeating-linear-gradient(5deg, #121b32, transparent 100px);;
+      justify-content: space-between;
+      padding: .75rem 2.75rem;
+      background: repeating-linear-gradient(5deg, #121b32, transparent 100px);
+      border-top: unset;
+      border-right: unset;
+
+      > section {
+        > h4 {
+          font-size: 1.25rem;
+          font-weight: bold;
+        }
+      }
     }
 
     > div {
@@ -85,6 +91,11 @@
       border: 0.1rem solid cornflowerblue;
       border-radius: 3rem .25rem;
       border-right: unset;
+    }
+
+    button {
+      background: linear-gradient(45deg, #9bdc18, #9e9f88);
+      color: black;
     }
   }
 }

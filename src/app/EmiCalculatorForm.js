@@ -15,7 +15,8 @@ import {
 import {DatePicker, LocalizationProvider} from '@mui/x-date-pickers';
 import {AdapterMoment} from '@mui/x-date-pickers/AdapterMoment';
 import moment from 'moment/moment';
-import {getFormattedCurrency} from '@/app/helper';
+import {exportToPDF, getFormattedCurrency} from '@/app/helper';
+import FileDownloadSharpIcon from '@mui/icons-material/FileDownloadSharp';
 
 const EmiCalculatorForm = () => {
     const {control, handleSubmit} = useForm({
@@ -101,15 +102,17 @@ const EmiCalculatorForm = () => {
             // Calculate principal component
             remainingPrincipal += interestComponent;
             const principalComponent = emi - interestComponent;
+            const prepayment = monthlyPrepayment ? parseInt(monthlyPrepayment, 10) : 0;
+            const balance = remainingPrincipal > 0 ? Math.round(remainingPrincipal) : 0;
 
             // Store the breakdown for this month
             breakdown.push({
                 month: moment(emiPeriod).clone().subtract(1, 'month').format('MMM YYYY'),
-                emi: parseInt(emi + monthlyPrepayment, 10),
-                interest: interestComponent.toFixed(2),
-                principal: Math.round(principalComponent),
-                prepayment: monthlyPrepayment ? parseInt(monthlyPrepayment, 10) : 0,
-                remainingPrincipal: remainingPrincipal > 0 ? Math.round(remainingPrincipal) : 0
+                emi: getFormattedCurrency(parseInt(emi, 10)),
+                interest: getFormattedCurrency(interestComponent.toFixed(2)),
+                principal: getFormattedCurrency(Math.round(principalComponent)),
+                prepayment: getFormattedCurrency(prepayment),
+                remainingPrincipal: getFormattedCurrency(balance)
             });
 
             // Stop if the loan is fully repaid
@@ -124,6 +127,16 @@ const EmiCalculatorForm = () => {
     const getFirstDayOfMonth = (date) => {
         return moment(date).startOf('month');
     }
+
+    const headers = [
+        '#',
+        'Month',
+        'EMI',
+        'Interest',
+        'Principal',
+        'Prepayment',
+        'Balance'
+    ];
 
     return (
         <>
@@ -186,31 +199,34 @@ const EmiCalculatorForm = () => {
                 </section>
             </form>
             {emiBreakdownList.length > 0 && <section className="table-section">
-                <h4>EMI Breakdown</h4>
+                <div className="table-header-div">
+                    <section>
+                        <h4>EMI Breakdown</h4>
+                    </section>
+                    <section>
+                        <Button variant="contained"
+                                color="primary"
+                                startIcon={<FileDownloadSharpIcon/>}
+                                onClick={() => exportToPDF(emiBreakdownList, headers)}>
+                            Export to PDF
+                        </Button>
+                    </section>
+                </div>
                 <div>
                     <TableContainer component={Paper}>
                         <Table>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>#</TableCell>
-                                    <TableCell>Month</TableCell>
-                                    <TableCell>EMI</TableCell>
-                                    <TableCell>Interest</TableCell>
-                                    <TableCell>Principal</TableCell>
-                                    <TableCell>Prepayment</TableCell>
-                                    <TableCell>Balance</TableCell>
+                                    {headers.map((header, ix) =>
+                                        <TableCell key={ix}>{header}</TableCell>)}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {emiBreakdownList.map((detail, ix) => (
                                     <TableRow key={`${ix}-${detail.month}`}>
                                         <TableCell>{++ix}</TableCell>
-                                        <TableCell>{detail.month}</TableCell>
-                                        <TableCell>{getFormattedCurrency(detail.emi)}</TableCell>
-                                        <TableCell>{getFormattedCurrency(detail.interest)}</TableCell>
-                                        <TableCell>{getFormattedCurrency(detail.principal)}</TableCell>
-                                        <TableCell>{getFormattedCurrency(detail.prepayment)}</TableCell>
-                                        <TableCell>{getFormattedCurrency(detail.remainingPrincipal)}</TableCell>
+                                        {Object.values(detail).map((value, ix) =>
+                                            <TableCell key={`${value}-${ix}`}>{value}</TableCell>)}
                                     </TableRow>
                                 ))}
                             </TableBody>

@@ -38,5 +38,5 @@ export const exportToPDF = (tableData, headers) => {
     });
 
     // Save the PDF
-    doc.save('home-loan-emi.pdf');
+    doc.save('emi-breakups.pdf');
 };

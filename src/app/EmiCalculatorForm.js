@@ -100,7 +100,7 @@ const EmiCalculatorForm = () => {
 
             // Calculate principal component
             remainingPrincipal += interestComponent;
-            const principalComponent = emi + monthlyPrepayment - interestComponent;
+            const principalComponent = emi - interestComponent;
 
             // Store the breakdown for this month
             breakdown.push({

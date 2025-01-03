@@ -56,4 +56,35 @@
       }
     }
   }
+
+  .table-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+
+    > h4 {
+      display: flex;
+      justify-content: center;
+      line-height: 3rem;
+      font-size: 1.25rem;
+      font-weight: bold;
+      border-radius: 2rem;
+      background: repeating-linear-gradient(5deg, #121b32, transparent 100px);;
+    }
+
+    > div {
+      > div {
+        padding: 1rem;
+        border: 0.1rem solid #9bdc18;
+        border-radius: 3rem .25rem;
+        border-left: unset;
+      }
+
+      padding: .1rem;
+      border: 0.1rem solid cornflowerblue;
+      border-radius: 3rem .25rem;
+      border-right: unset;
+    }
+  }
 }

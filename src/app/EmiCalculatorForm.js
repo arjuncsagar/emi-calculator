@@ -185,37 +185,39 @@ const EmiCalculatorForm = () => {
                     <Button type="submit" variant="contained">Calculate</Button>
                 </section>
             </form>
-            <section>
+            {emiBreakdownList.length > 0 && <section className="table-section">
                 <h4>EMI Breakdown</h4>
-                <TableContainer component={Paper}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>#</TableCell>
-                                <TableCell>Month</TableCell>
-                                <TableCell>EMI</TableCell>
-                                <TableCell>Interest</TableCell>
-                                <TableCell>Principal</TableCell>
-                                <TableCell>Prepayment</TableCell>
-                                <TableCell>Balance</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {emiBreakdownList.map((detail, ix) => (
-                                <TableRow key={`${ix}-${detail.month}`}>
-                                    <TableCell>{++ix}</TableCell>
-                                    <TableCell>{detail.month}</TableCell>
-                                    <TableCell>{getFormattedCurrency(detail.emi)}</TableCell>
-                                    <TableCell>{getFormattedCurrency(detail.interest)}</TableCell>
-                                    <TableCell>{getFormattedCurrency(detail.principal)}</TableCell>
-                                    <TableCell>{getFormattedCurrency(detail.prepayment)}</TableCell>
-                                    <TableCell>{getFormattedCurrency(detail.remainingPrincipal)}</TableCell>
+                <div>
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>#</TableCell>
+                                    <TableCell>Month</TableCell>
+                                    <TableCell>EMI</TableCell>
+                                    <TableCell>Interest</TableCell>
+                                    <TableCell>Principal</TableCell>
+                                    <TableCell>Prepayment</TableCell>
+                                    <TableCell>Balance</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </section>
+                            </TableHead>
+                            <TableBody>
+                                {emiBreakdownList.map((detail, ix) => (
+                                    <TableRow key={`${ix}-${detail.month}`}>
+                                        <TableCell>{++ix}</TableCell>
+                                        <TableCell>{detail.month}</TableCell>
+                                        <TableCell>{getFormattedCurrency(detail.emi)}</TableCell>
+                                        <TableCell>{getFormattedCurrency(detail.interest)}</TableCell>
+                                        <TableCell>{getFormattedCurrency(detail.principal)}</TableCell>
+                                        <TableCell>{getFormattedCurrency(detail.prepayment)}</TableCell>
+                                        <TableCell>{getFormattedCurrency(detail.remainingPrincipal)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </div>
+            </section>}
         </>
     );
 };
